@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>支出確認</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f5f5f5; padding: 24px 16px; }
+    h1 { font-size: 20px; color: #333; margin-bottom: 24px; text-align: center; }
+    .card { background: #fff; border-radius: 12px; padding: 24px; max-width: 480px; margin: 0 auto 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
+    select, input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+    select:focus, input:focus { outline: none; border-color: #06C755; }
+    .btn { width: 100%; padding: 14px; background: #06C755; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+    .btn:active { background: #05a847; }
+    .result { background: #fff; border-radius: 12px; padding: 24px; max-width: 480px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: none; }
+    .result h2 { font-size: 16px; color: #333; margin-bottom: 16px; }
+    .total { font-size: 28px; font-weight: bold; color: #06C755; margin-bottom: 8px; }
+    .comparison { font-size: 14px; color: #888; margin-bottom: 16px; }
+    .comparison.up { color: #e00; }
+    .comparison.down { color: #06C755; }
+    .divider { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+    .category-row { margin-bottom: 12px; }
+    .category-label { display: flex; justify-content: space-between; font-size: 14px; color: #333; margin-bottom: 4px; }
+    .bar-bg { background: #f0f0f0; border-radius: 4px; height: 8px; }
+    .bar-fill { background: #06C755; border-radius: 4px; height: 8px; transition: width 0.4s; }
+    .msg { margin-top: 16px; text-align: center; font-size: 14px; color: #e00; display: none; }
+  </style>
+</head>
+<body>
+  <h1>📊 支出確認</h1>
+  <div class="card">
+    <div class="form-group">
+      <label>期間</label>
+      <select id="period">
+        <option value="current">今月</option>
+        <option value="select">月を選択</option>
+        <option value="all">全体</option>
+      </select>
+    </div>
+    <div class="form-group" id="month-group" style="display:none;">
+      <label>月を選択</label>
+      <input type="month" id="month">
+    </div>
+    <button class="btn" onclick="fetchSummary()">確認する</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="result" id="result">
+    <h2 id="result-title"></h2>
+    <div class="total" id="result-total"></div>
+    <div class="comparison" id="result-comparison"></div>
+    <hr class="divider">
+    <div id="result-categories"></div>
+  </div>
+
+  <script>
+    const GAS_URL = 'ここにGASのウェブアプリURLを貼り付け';
+
+    // 月選択の表示切り替え
+    document.getElementById('period').addEventListener('change', function () {
+      document.getElementById('month-group').style.display = this.value === 'select' ? 'block' : 'none';
+    });
+
+    // 今月をデフォルトセット
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    document.getElementById('month').value = `${yyyy}-${mm}`;
+
+    async function fetchSummary() {
+      const period = document.getElementById('period').value;
+      let yearMonth = null;
+
+      if (period === 'current') {
+        yearMonth = `${yyyy}/${mm}`;
+      } else if (period === 'select') {
+        const val = document.getElementById('month').value;
+        if (!val) { showMsg('月を選択してください。'); return; }
+        yearMonth = val.replace('-', '/');
+      }
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'summary', yearMonth, period })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          renderResult(data, period, yearMonth);
+        } else {
+          showMsg('データの取得に失敗しました。');
+        }
+      } catch (e) {
+        showMsg('通信エラーが発生しました。');
+      }
+    }
+
+    function renderResult(data, period, yearMonth) {
+      const result = document.getElementById('result');
+      result.style.display = 'block';
+
+      // タイトル
+      const titleMap = { current: '今月の支出', all: '全体の支出' };
+      document.getElementById('result-title').textContent = period === 'select' ? `${yearMonth} の支出` : titleMap[period];
+
+      // 合計
+      document.getElementById('result-total').textContent = `¥${Number(data.total).toLocaleString()}`;
+
+      // 前月比
+      const compEl = document.getElementById('result-comparison');
+      if (data.comparison !== null && period !== 'all') {
+        const diff = data.comparison;
+        const sign = diff >= 0 ? '+' : '';
+        compEl.textContent = `前月比：${sign}¥${Math.abs(diff).toLocaleString()}`;
+        compEl.className = `comparison ${diff >= 0 ? 'up' : 'down'}`;
+      } else {
+        compEl.textContent = '';
+      }
+
+      // 種別
+      const catEl = document.getElementById('result-categories');
+      catEl.innerHTML = '';
+      const max = Math.max(...Object.values(data.categories));
+      for (const [cat, amt] of Object.entries(data.categories)) {
+        const pct = max > 0 ? (amt / max) * 100 : 0;
+        catEl.innerHTML += `
+          <div class="category-row">
+            <div class="category-label">
+              <span>${cat}</span>
+              <span>¥${Number(amt).toLocaleString()}</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+          </div>`;
+      }
+    }
+
+    function showMsg(text) {
+      const msg = document.getElementById('msg');
+      msg.textContent = text;
+      msg.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
