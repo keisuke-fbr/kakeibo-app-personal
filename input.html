@@ -70,30 +70,26 @@
     });
 
     async function submit() {
-      const date = document.getElementById('date').value;
+      const date = document.getElementById('date').value.replace(/-/g, '/');
       const content = document.getElementById('content').value.trim();
       const category = document.getElementById('category').value;
       const amount = document.getElementById('amount').value;
-      const msg = document.getElementById('msg');
-
+    
       if (!date || !content || !category || !amount) {
         showMsg('すべての項目を入力してください。', 'error');
         return;
       }
-
-      try {
-        await fetch(GAS_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'add', date, content, category, amount })
-        });
-        showMsg('登録しました！', 'success');
-        document.getElementById('content').value = '';
-        document.getElementById('amount').value = '';
-      } catch (e) {
-        showMsg('通信エラーが発生しました。', 'error');
-      }
+    
+      await liff.sendMessages([
+        {
+          type: 'text',
+          text: `${date}\n${content}\n${category}\n${amount}`
+        }
+      ]);
+    
+      showMsg('登録しました！', 'success');
+      document.getElementById('content').value = '';
+      document.getElementById('amount').value = '';
     }
 
     function showMsg(text, type) {
