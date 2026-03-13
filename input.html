@@ -19,7 +19,7 @@
     .msg.success { color: #06C755; }
     .msg.error { color: #e00; }
   </style>
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
   <h1>💰 支出入力</h1>
@@ -53,7 +53,7 @@
     liff.init({ liffId: LIFF_ID }).then(() => {
       initializeApp();
     }).catch(err => {
-      console.error('LIFF init failed', err);
+      showMsg('LIFF初期化に失敗しました: ' + err, 'error');
     });
 
     function initializeApp() {
@@ -85,12 +85,24 @@
         return;
       }
 
+      // LINEアプリ内でない場合はエラー表示
+      if (!liff.isInClient()) {
+        showMsg('LINEアプリ内で開いてください。', 'error');
+        return;
+      }
+
+      const btn = document.querySelector('.btn');
+      btn.disabled = true;
+      btn.textContent = '送信中...';
+
       const msg = `${date}\n${content}\n${category}\n${amount}`;
 
       liff.sendMessages([{ type: 'text', text: msg }]).then(() => {
         liff.closeWindow();
       }).catch(err => {
-        showMsg('送信に失敗しました: ' + err, 'error');
+        btn.disabled = false;
+        btn.textContent = '送信';
+        showMsg('送信に失敗しました。LINEアプリから開き直してください。\n' + err, 'error');
       });
     }
 
