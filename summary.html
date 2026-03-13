@@ -57,7 +57,7 @@
   </div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbx_JcFK_hl6yBWk-LdjzQUGrwKbe3kj3ZdcgYbogcRUyRvQeDcechDlxYm7ZvEnmFrt/exec](https://script.google.com/macros/s/AKfycbx_JcFK_hl6yBWk-LdjzQUGrwKbe3kj3ZdcgYbogcRUyRvQeDcechDlxYm7ZvEnmFrt/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbx_JcFK_hl6yBWk-LdjzQUGrwKbe3kj3ZdcgYbogcRUyRvQeDcechDlxYm7ZvEnmFrt/exec';
 
     // 月選択の表示切り替え
     document.getElementById('period').addEventListener('change', function () {
@@ -85,7 +85,7 @@
       try {
         const res = await fetch(GAS_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({ action: 'summary', yearMonth, period })
         });
         const data = await res.json();
