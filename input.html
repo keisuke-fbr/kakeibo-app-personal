@@ -42,6 +42,12 @@
       <label>金額（円）</label>
       <input type="number" id="amount" placeholder="例）1200">
     </div>
+    <div class="form-group">
+      <label>支払方法</label>
+      <select id="paymentMethod">
+        <option value="">指定なし</option>
+      </select>
+    </div>
     <button class="btn" onclick="submitForm()">送信</button>
     <div class="msg" id="msg"></div>
   </div>
@@ -49,6 +55,7 @@
   <script>
     const LIFF_ID = '2009421302-l5gRRxsT';
     const CATEGORIES = ['食費', '本', 'サッカー', '服', 'コンビニ', '優衣', 'その他'];
+    const PAYMENT_METHODS = ['楽天Pay', '楽天カード', '三井住友カード', 'JALカード', '交通系', '現金', 'その他'];
 
     liff.init({ liffId: LIFF_ID }).then(() => {
       initializeApp();
@@ -71,6 +78,15 @@
         opt.value = cat;
         opt.textContent = cat;
         sel.appendChild(opt);
+      });
+
+      // 支払方法をセット（「指定なし」のままでも送信できる）
+      const paySel = document.getElementById('paymentMethod');
+      PAYMENT_METHODS.forEach(pm => {
+        const opt = document.createElement('option');
+        opt.value = pm;
+        opt.textContent = pm;
+        paySel.appendChild(opt);
       });
     }
 
@@ -95,7 +111,11 @@
       btn.disabled = true;
       btn.textContent = '送信中...';
 
-      const msg = `${date}\n${content}\n${category}\n${amount}`;
+      // 支払方法が未選択のときは4行のまま送る（5行目は選んだときだけ）
+      const paymentMethod = document.getElementById('paymentMethod').value;
+      const msg = paymentMethod
+        ? `${date}\n${content}\n${category}\n${amount}\n${paymentMethod}`
+        : `${date}\n${content}\n${category}\n${amount}`;
 
       liff.sendMessages([{ type: 'text', text: msg }]).then(() => {
         liff.closeWindow();
